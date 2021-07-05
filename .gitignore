@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+
+# my stuff
+linux64GccDPInt32Opt/
+
