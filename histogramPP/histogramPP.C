@@ -9,12 +9,15 @@ int main(int argc, char *argv[])
   #include "createMesh.H"
   instantList timeDirs = timeSelector::select0(runTime, args);
 
+  // calculate total volume
   double v=0;
   forAll(mesh.C(),cell){v += mesh.V()[cell];}
 
+  // bin count, volume in maximum 56 temperature bins and 30 time stamps
   double binCount[30][56]; 
   memset(binCount, 0.0, sizeof(double)*30*56);  //set all elements to zero for initial values
 
+  // bin count, methane mass in maximum 56 temperature bins and 30 time stamps 
   double binCountMethane[30][56]; 
   memset(binCountMethane, 0.0, sizeof(double)*30*56);  //set all elements to zero for initial values
 
@@ -22,9 +25,26 @@ int main(int argc, char *argv[])
   cout << "Type last time in ms: ";
   cin >> timeLast;
 
-  int nbin = timeLast/5;
+  // total number of time stamps
+  //int nbin = timeLast/5;
+  int nbin = timeLast;
 
-  for (int timeI=5; timeI<timeLast; timeI = timeI +5)
+  // number of timestamps can not exceed the limit
+  if (nbin >=30)  {nbin=29;}
+
+  // initial time
+  //timeIni = 5;
+  int timeIni = 1;
+
+  // time step
+  //timeStep = 5;
+  int timeStep = 1;
+
+  // last time
+  timeLast = timeIni + timeStep*nbin;
+
+  // marching time
+  for (int timeI=timeIni; timeI<timeLast; timeI = timeI + timeStep)
   {
         // read temperature results
         runTime.setTime(timeDirs[timeI], timeI);
@@ -70,12 +90,28 @@ int main(int argc, char *argv[])
         );
 
 	// do bin counting
-	int index = timeI/5 - 1;
-	int binSelection;
+	int index = timeI/timeStep - 1;
+
+	// temperature bin
+	int binSelected;
+	float tempMin = 1300.0;
+	float tempBinSize = 10.0;
+	// bin are ,
+	// 1. 1200 - 1205
+	// 2. 1205 - 1210
+	// 3. 1210 - 1215
+	// ...
+
         forAll(mesh.C(), cell){
-            binSelection = (T[cell]-950.0)/50;
-	    binCount[index][binSelection] += mesh.V()[cell];
-	    binCountMethane[index][binSelection] += mesh.V()[cell]*rho[cell]*Ych4[cell];
+
+	    // example: if temperature is 1432K, the bin # is 46, which is from 1430K to 1435K. 
+	
+            binSelected = (T[cell]-tempMin)/tempBinSize;
+
+	    if (binSelected < 0) { binSelected = 0;}    // there is no bin for temperature below tempMin
+	    if (binSelected >= 56) { binSelected = 55;}  // there is no bin for temperature larger than tempLast
+	    binCount[index][binSelected] += mesh.V()[cell];      // total volume in this temperature bin
+	    binCountMethane[index][binSelected] += mesh.V()[cell]*rho[cell]*Ych4[cell];  // total methane mass in this temperature bin 
 	}  
 	
         Info << "Time = " << runTime.timeName() << endl;
